@@ -72,6 +72,14 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+apply from: file("../load-dotenv.gradle")
+def dotenv = loadDotEnv(projectDir)
+def googleMapsApiKey = dotenv.get("GOOGLE_MAPS_API_KEY", "")
+
+if (googleMapsApiKey.isEmpty()) {
+    logger.warn("GOOGLE_MAPS_API_KEY is missing. Copy .env.example to .env and add your key.")
+}
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -84,6 +92,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [GOOGLE_MAPS_API_KEY: googleMapsApiKey]
     }
     signingConfigs {
         debug {
