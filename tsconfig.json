@@ -10,10 +10,12 @@
       "@theme/*": ["src/theme/*"],
       "@hooks/*": ["src/hooks/*"],
       "@navigation/*": ["src/navigation/*"],
-      "@utils/*": ["src/utils/*"]
+      "@utils/*": ["src/utils/*"],
+      "@store": ["src/store/index.ts"],
+      "@store/*": ["src/store/*"]
     },
     "types": ["jest"]
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "env.d.ts"],
   "exclude": ["**/node_modules", "**/Pods"]
 }

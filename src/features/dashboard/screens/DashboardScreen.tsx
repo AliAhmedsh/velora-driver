@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, View, Pressable, Switch } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { VeloraText } from '@components/atoms/VeloraText';
 import { useTheme } from '@hooks/useTheme';
+import { useAppDispatch, useAppSelector } from '@hooks/useAppDispatch';
+import { setOnline } from '@store';
+import { MainStackParamList } from '@navigation/types';
 import { spacing, radius, shadow } from '@theme/spacing';
 
 const PRIORITIES = [
@@ -15,8 +20,17 @@ const PRIORITIES = [
 export function DashboardScreen() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const [isOnline, setIsOnline] = useState(false);
-  const [autoMatch, setAutoMatch] = useState(false);
+  const dispatch = useAppDispatch();
+  const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  const { isOnline, activeRide } = useAppSelector(state => state.ride);
+  const [autoMatch, setAutoMatch] = React.useState(false);
+
+  const hasIncoming = isOnline && activeRide?.status === 'searching';
+  const hasActiveRide =
+    activeRide &&
+    activeRide.status !== 'searching' &&
+    activeRide.status !== 'completed' &&
+    activeRide.status !== 'cancelled';
 
   return (
     <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
@@ -52,7 +66,7 @@ export function DashboardScreen() {
             </View>
             <Switch
               value={isOnline}
-              onValueChange={setIsOnline}
+              onValueChange={value => dispatch(setOnline(value))}
               trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
               thumbColor={theme.colors.white}
             />
@@ -63,6 +77,26 @@ export function DashboardScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}>
+        {(hasIncoming || hasActiveRide) && (
+          <Pressable
+            onPress={() => navigation.navigate('DriverRide')}
+            style={[
+              styles.requestBanner,
+              shadow.md,
+              { backgroundColor: theme.colors.accent, borderColor: theme.colors.border },
+            ]}>
+            <VeloraText variant="h3" color={theme.colors.textOnPrimary}>
+              {hasIncoming ? 'New ride request!' : 'Active ride'}
+            </VeloraText>
+            <VeloraText variant="caption" color={theme.colors.brown200}>
+              {activeRide?.pickup.address} → {activeRide?.dropoff.address}
+            </VeloraText>
+            <VeloraText variant="label" color={theme.colors.textOnPrimary} style={styles.tapHint}>
+              Tap to open map →
+            </VeloraText>
+          </Pressable>
+        )}
+
         <View style={styles.earningsRow}>
           <View
             style={[
@@ -168,6 +202,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scroll: { paddingHorizontal: spacing.xxl, paddingTop: spacing.lg },
+  requestBanner: {
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.lg,
+  },
+  tapHint: { marginTop: spacing.sm },
   earningsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xxl },
   earnCard: {
     flex: 1,

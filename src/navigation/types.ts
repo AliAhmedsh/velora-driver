@@ -11,6 +11,11 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
+export type MainStackParamList = {
+  MainTabs: undefined;
+  DriverRide: undefined;
+};
+
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;

@@ -1,7 +1,6 @@
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
-    'react-native-reanimated/plugin',
     [
       'module-resolver',
       {
@@ -15,6 +14,7 @@ module.exports = {
           '@hooks': './src/hooks',
           '@navigation': './src/navigation',
           '@utils': './src/utils',
+          '@store': './src/store',
         },
       },
     ],
@@ -27,5 +27,6 @@ module.exports = {
         allowUndefined: true,
       },
     ],
+    'react-native-worklets/plugin',
   ],
 };
