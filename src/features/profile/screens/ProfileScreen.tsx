@@ -47,9 +47,10 @@ export function ProfileScreen() {
   ];
 
   return (
-    <ScrollView
-      style={[styles.flex, { backgroundColor: theme.colors.background }]}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
+    <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
         <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
           <VeloraText variant="h1" color={theme.colors.textOnPrimary}>{name.charAt(0).toUpperCase()}</VeloraText>
@@ -92,7 +93,8 @@ export function ProfileScreen() {
       <Pressable style={styles.logout} onPress={signOut}>
         <VeloraText variant="bodyMedium" color={theme.colors.error}>Log out</VeloraText>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
