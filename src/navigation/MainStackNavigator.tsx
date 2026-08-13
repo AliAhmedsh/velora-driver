@@ -4,6 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainNavigator } from './MainNavigator';
 import { DriverRideScreen } from '@features/ride/screens/DriverRideScreen';
+import { ChatScreen } from '@features/ride/screens/ChatScreen';
+import { DestinationQueueScreen } from '@features/dashboard/screens/DestinationQueueScreen';
+import { NotificationsScreen } from '@features/notifications/screens/NotificationsScreen';
+import { SupportScreen } from '@features/support/screens/SupportScreen';
+import { DocumentsScreen } from '@features/documents/screens/DocumentsScreen';
+import { VehicleRegistrationScreen } from '@features/documents/screens/VehicleRegistrationScreen';
 import { MainStackParamList } from './types';
 import { useRideSync } from '@hooks/useRideSync';
 import { useAppSelector } from '@hooks/useAppDispatch';
@@ -34,6 +40,12 @@ export function MainStackNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={MainNavigator} />
         <Stack.Screen name="DriverRide" component={DriverRideScreen} />
+        <Stack.Screen name="DestinationQueue" component={DestinationQueueScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Support" component={SupportScreen} />
+        <Stack.Screen name="Documents" component={DocumentsScreen} />
+        <Stack.Screen name="VehicleRegistration" component={VehicleRegistrationScreen} />
       </Stack.Navigator>
     </>
   );

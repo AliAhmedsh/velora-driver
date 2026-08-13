@@ -1,21 +1,24 @@
-import React from 'react';
-import { ScrollView, StyleSheet, View, Pressable, Switch } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View, Pressable, Switch, ActivityIndicator } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { VeloraText } from '@components/atoms/VeloraText';
 import { useTheme } from '@hooks/useTheme';
 import { useAppDispatch, useAppSelector } from '@hooks/useAppDispatch';
-import { setOnline } from '@store';
+import { setOnline, syncRideState } from '@store';
 import { MainStackParamList } from '@navigation/types';
 import { spacing, radius, shadow } from '@theme/spacing';
-
-const PRIORITIES = [
-  { city: 'Lahore', eta: '6:00 PM', priority: 1 },
-  { city: 'Peshawar', eta: 'Tomorrow 10 AM', priority: 2 },
-  { city: 'Karachi', eta: 'Aug 10, 8 AM', priority: 3 },
-];
+import { formatFare } from '@utils/locations';
+import {
+  fetchC2CPlans,
+  fetchDestinationQueue,
+  fetchDriverSettings,
+  updateDriverSettings,
+  type QueueItem,
+} from '../../../services/queueService';
+import { fetchTodayEarnings, fetchWeekEarnings } from '../../../services/walletService';
 
 export function DashboardScreen() {
   const { theme } = useTheme();
@@ -23,7 +26,46 @@ export function DashboardScreen() {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { isOnline, activeRide } = useAppSelector(state => state.ride);
-  const [autoMatch, setAutoMatch] = React.useState(false);
+
+  const [autoMatch, setAutoMatch] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [weekEarnings, setWeekEarnings] = useState(0);
+  const [topPlan, setTopPlan] = useState<{ name: string; price_pkr: number; description?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [settings, q, today, week, plans] = await Promise.all([
+        fetchDriverSettings(),
+        fetchDestinationQueue(),
+        fetchTodayEarnings(),
+        fetchWeekEarnings(),
+        fetchC2CPlans(),
+      ]);
+      if (settings) {
+        dispatch(setOnline(settings.is_online ?? false));
+        setAutoMatch(settings.auto_match ?? false);
+      }
+      setQueue(q);
+      setTodayEarnings(today);
+      setWeekEarnings(week);
+      const premium = plans.find(p => p.name?.toLowerCase().includes('platinum')) ?? plans[plans.length - 1];
+      if (premium) setTopPlan(premium);
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard]),
+  );
+
+  useEffect(() => {
+    dispatch(syncRideState());
+  }, [dispatch, isOnline]);
 
   const hasIncoming = isOnline && activeRide?.status === 'searching';
   const hasActiveRide =
@@ -32,6 +74,25 @@ export function DashboardScreen() {
     activeRide.status !== 'completed' &&
     activeRide.status !== 'cancelled';
 
+  const handleOnlineToggle = async (value: boolean) => {
+    dispatch(setOnline(value));
+    await updateDriverSettings({ is_online: value });
+    dispatch(syncRideState());
+  };
+
+  const handleAutoMatchToggle = async (value: boolean) => {
+    setAutoMatch(value);
+    await updateDriverSettings({ auto_match: value });
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.flex, styles.centered, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
@@ -39,15 +100,8 @@ export function DashboardScreen() {
         style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
         <View style={styles.headerRow}>
           <View>
-            <VeloraText variant="caption" color="rgba(250,247,242,0.75)">
-              Driver dashboard
-            </VeloraText>
-            <VeloraText variant="h2" color={theme.colors.textOnPrimary}>
-              Hassan Khan
-            </VeloraText>
-          </View>
-          <View style={[styles.ratingBadge, { backgroundColor: theme.colors.accent }]}>
-            <VeloraText variant="label" color={theme.colors.textOnPrimary}>4.9 ★</VeloraText>
+            <VeloraText variant="caption" color="rgba(250,247,242,0.75)">Driver dashboard</VeloraText>
+            <VeloraText variant="h2" color={theme.colors.textOnPrimary}>Velora Driver</VeloraText>
           </View>
         </View>
 
@@ -66,7 +120,7 @@ export function DashboardScreen() {
             </View>
             <Switch
               value={isOnline}
-              onValueChange={value => dispatch(setOnline(value))}
+              onValueChange={handleOnlineToggle}
               trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
               thumbColor={theme.colors.white}
             />
@@ -105,7 +159,7 @@ export function DashboardScreen() {
               { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
             ]}>
             <VeloraText variant="caption" color={theme.colors.textSecondary}>Today</VeloraText>
-            <VeloraText variant="h2" color={theme.colors.primary}>PKR 4,850</VeloraText>
+            <VeloraText variant="h2" color={theme.colors.primary}>{formatFare(todayEarnings)}</VeloraText>
           </View>
           <View
             style={[
@@ -114,13 +168,13 @@ export function DashboardScreen() {
               { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
             ]}>
             <VeloraText variant="caption" color={theme.colors.textSecondary}>This week</VeloraText>
-            <VeloraText variant="h2" color={theme.colors.primary}>PKR 28,200</VeloraText>
+            <VeloraText variant="h2" color={theme.colors.primary}>{formatFare(weekEarnings)}</VeloraText>
           </View>
         </View>
 
         <View style={styles.sectionHeader}>
           <VeloraText variant="h3">Destination queue</VeloraText>
-          <Pressable>
+          <Pressable onPress={() => navigation.navigate('DestinationQueue')}>
             <VeloraText variant="label" color={theme.colors.primary}>Edit</VeloraText>
           </Pressable>
         </View>
@@ -131,42 +185,47 @@ export function DashboardScreen() {
             shadow.sm,
             { backgroundColor: theme.colors.card, borderColor: theme.colors.border },
           ]}>
-          <VeloraText variant="caption" color={theme.colors.textSecondary}>Current city</VeloraText>
-          <VeloraText variant="bodyMedium" style={styles.currentCity}>Islamabad</VeloraText>
-
-          {PRIORITIES.map(item => (
-            <View key={item.priority} style={styles.priorityRow}>
-              <View style={[styles.priorityDot, { backgroundColor: theme.colors.accent }]}>
-                <VeloraText variant="caption" color={theme.colors.textOnPrimary}>{item.priority}</VeloraText>
+          {queue.length === 0 ? (
+            <VeloraText variant="bodyMedium" color={theme.colors.textSecondary}>
+              No destinations set. Tap Edit to add your 3-city queue.
+            </VeloraText>
+          ) : (
+            queue.map(item => (
+              <View key={item.priority} style={styles.priorityRow}>
+                <View style={[styles.priorityDot, { backgroundColor: theme.colors.accent }]}>
+                  <VeloraText variant="caption" color={theme.colors.textOnPrimary}>{item.priority}</VeloraText>
+                </View>
+                <View style={styles.priorityInfo}>
+                  <VeloraText variant="bodyMedium">{item.city_name}</VeloraText>
+                  {item.eta ? (
+                    <VeloraText variant="caption" color={theme.colors.textMuted}>{item.eta}</VeloraText>
+                  ) : null}
+                </View>
               </View>
-              <View style={styles.priorityInfo}>
-                <VeloraText variant="bodyMedium">{item.city}</VeloraText>
-                <VeloraText variant="caption" color={theme.colors.textMuted}>{item.eta}</VeloraText>
-              </View>
-            </View>
-          ))}
+            ))
+          )}
 
           <View style={styles.autoRow}>
             <VeloraText variant="bodyMedium">Auto match</VeloraText>
             <Switch
               value={autoMatch}
-              onValueChange={setAutoMatch}
+              onValueChange={handleAutoMatchToggle}
               trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
               thumbColor={theme.colors.white}
             />
           </View>
         </View>
 
-        <LinearGradient
-          colors={[theme.colors.gradientStart, theme.colors.gradientEnd]}
-          style={[styles.cta, shadow.md]}>
-          <VeloraText variant="h3" color={theme.colors.textOnPrimary}>
-            Platinum C2C Plan
-          </VeloraText>
-          <VeloraText variant="caption" color={theme.colors.brown200} style={styles.ctaSub}>
-            Higher priority matching · Premium benefits
-          </VeloraText>
-        </LinearGradient>
+        {topPlan && (
+          <LinearGradient
+            colors={[theme.colors.gradientStart, theme.colors.gradientEnd]}
+            style={[styles.cta, shadow.md]}>
+            <VeloraText variant="h3" color={theme.colors.textOnPrimary}>{topPlan.name}</VeloraText>
+            <VeloraText variant="caption" color={theme.colors.brown200} style={styles.ctaSub}>
+              PKR {topPlan.price_pkr} · {topPlan.description ?? 'Intercity driver benefits'}
+            </VeloraText>
+          </LinearGradient>
+        )}
       </ScrollView>
     </View>
   );
@@ -174,6 +233,7 @@ export function DashboardScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  centered: { alignItems: 'center', justifyContent: 'center' },
   header: {
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.lg,
@@ -186,54 +246,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
   },
-  ratingBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  onlineCard: {
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  onlineRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  onlineCard: { padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1 },
+  onlineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   scroll: { paddingHorizontal: spacing.xxl, paddingTop: spacing.lg },
-  requestBanner: {
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.lg,
-  },
+  requestBanner: { padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, marginBottom: spacing.lg },
   tapHint: { marginTop: spacing.sm },
   earningsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xxl },
-  earnCard: {
-    flex: 1,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
+  earnCard: { flex: 1, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  queueCard: {
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.xxl,
-  },
-  currentCity: { marginTop: spacing.xs, marginBottom: spacing.lg },
-  priorityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
+  queueCard: { padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, marginBottom: spacing.xxl },
+  priorityRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   priorityDot: {
     width: 28,
     height: 28,
@@ -252,9 +279,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.06)',
   },
-  cta: {
-    padding: spacing.xl,
-    borderRadius: radius.xl,
-  },
+  cta: { padding: spacing.xl, borderRadius: radius.xl },
   ctaSub: { marginTop: spacing.xs },
 });

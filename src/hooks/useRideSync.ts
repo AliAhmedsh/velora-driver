@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch } from './useAppDispatch';
 import { hydrateRideState, syncRideState } from '@store';
+import { subscribeToRides } from '../services/rideService';
 
 export function useRideSync(enabled = true) {
   const dispatch = useAppDispatch();
@@ -12,9 +13,18 @@ export function useRideSync(enabled = true) {
 
   useEffect(() => {
     if (!enabled) return;
+
+    const unsubscribe = subscribeToRides(() => {
+      dispatch(syncRideState());
+    });
+
     const interval = setInterval(() => {
       dispatch(syncRideState());
-    }, 2000);
-    return () => clearInterval(interval);
+    }, 10000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [dispatch, enabled]);
 }

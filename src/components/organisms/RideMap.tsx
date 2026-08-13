@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import type { RideLocation } from '../../types/ride';
 import { ISLAMABAD_CENTER } from '../../utils/locations';
@@ -10,6 +10,16 @@ type RideMapProps = {
   driverLocation?: RideLocation | null;
   showRoute?: boolean;
 };
+
+const PIN = {
+  pickup: '#7C4A2D',
+  dropoff: '#C9A66B',
+  driver: '#3D8B5F',
+};
+
+function Pin({ color }: { color: string }) {
+  return <View style={[styles.pin, { backgroundColor: color }]} />;
+}
 
 export function RideMap({ pickup, dropoff, driverLocation, showRoute = true }: RideMapProps) {
   const mapRef = useRef<MapView>(null);
@@ -23,68 +33,54 @@ export function RideMap({ pickup, dropoff, driverLocation, showRoute = true }: R
     return { latitude, longitude, address: '' };
   }, [pickup, dropoff, driverLocation]);
 
-  const routeCoords =
-    showRoute && pickup && dropoff
-      ? [
-          { latitude: pickup.latitude, longitude: pickup.longitude },
-          { latitude: dropoff.latitude, longitude: dropoff.longitude },
-        ]
-      : [];
-
-  const mapProvider = Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined;
+  const region = useMemo(
+    () => ({
+      latitude: center.latitude,
+      longitude: center.longitude,
+      latitudeDelta: 0.08,
+      longitudeDelta: 0.08,
+    }),
+    [center.latitude, center.longitude],
+  );
 
   useEffect(() => {
-    mapRef.current?.animateToRegion(
-      {
-        latitude: center.latitude,
-        longitude: center.longitude,
-        latitudeDelta: 0.12,
-        longitudeDelta: 0.12,
-      },
-      400,
-    );
-  }, [center.latitude, center.longitude]);
+    mapRef.current?.animateToRegion(region, 400);
+  }, [region]);
 
   return (
     <View style={styles.container}>
       <MapView
         ref={mapRef}
-        provider={mapProvider}
         style={styles.map}
-        initialRegion={{
-          latitude: center.latitude,
-          longitude: center.longitude,
-          latitudeDelta: 0.12,
-          longitudeDelta: 0.12,
-        }}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={region}
         showsUserLocation
-        showsMyLocationButton={Platform.OS === 'android'}
-        loadingEnabled>
-        {pickup && (
-          <Marker
-            coordinate={{ latitude: pickup.latitude, longitude: pickup.longitude }}
-            title="Pickup"
-            description={pickup.address}
-            pinColor="#7C4A2D"
+      >
+        {showRoute && pickup && dropoff && (
+          <Polyline
+            coordinates={[
+              { latitude: pickup.latitude, longitude: pickup.longitude },
+              { latitude: dropoff.latitude, longitude: dropoff.longitude },
+            ]}
+            strokeColor="#7C4A2D"
+            strokeWidth={4}
           />
+        )}
+
+        {pickup && (
+          <Marker coordinate={{ latitude: pickup.latitude, longitude: pickup.longitude }}>
+            <Pin color={PIN.pickup} />
+          </Marker>
         )}
         {dropoff && (
-          <Marker
-            coordinate={{ latitude: dropoff.latitude, longitude: dropoff.longitude }}
-            title="Drop-off"
-            description={dropoff.address}
-            pinColor="#C9A66B"
-          />
+          <Marker coordinate={{ latitude: dropoff.latitude, longitude: dropoff.longitude }}>
+            <Pin color={PIN.dropoff} />
+          </Marker>
         )}
         {driverLocation && (
-          <Marker
-            coordinate={{ latitude: driverLocation.latitude, longitude: driverLocation.longitude }}
-            title="You"
-            pinColor="#3D8B5F"
-          />
-        )}
-        {routeCoords.length === 2 && (
-          <Polyline coordinates={routeCoords} strokeColor="#7C4A2D" strokeWidth={4} />
+          <Marker coordinate={{ latitude: driverLocation.latitude, longitude: driverLocation.longitude }}>
+            <Pin color={PIN.driver} />
+          </Marker>
         )}
       </MapView>
     </View>
@@ -98,6 +94,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8DDD0',
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
+  },
+  pin: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
 });

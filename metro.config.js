@@ -14,6 +14,7 @@ const config = {
         const target = `./src/store/${rest}`;
         return context.resolveRequest(context, target, platform);
       }
+
       return context.resolveRequest(context, moduleName, platform);
     },
   },

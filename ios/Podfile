@@ -5,8 +5,39 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
+def load_dotenv
+  env_path = File.expand_path('../.env', Pod::Config.instance.installation_root)
+  env = {}
+  return env unless File.exist?(env_path)
+
+  File.foreach(env_path) do |line|
+    line = line.strip
+    next if line.empty? || line.start_with?('#')
+
+    key, value = line.split('=', 2)
+    next unless key && value
+
+    env[key.strip] = value.strip.gsub(/\A["']|["']\z/, '')
+  end
+  env
+end
+
+def generate_google_maps_config!(app_folder)
+  key = load_dotenv['GOOGLE_MAPS_API_KEY'] || ''
+  escaped = key.gsub('\\', '\\\\').gsub('"', '\\"')
+  output = File.join(__dir__, app_folder, 'GoogleMapsConfig.generated.swift')
+  File.write(output, <<~SWIFT)
+    // Generated from .env by Podfile — run `pod install` after changing GOOGLE_MAPS_API_KEY
+    enum GoogleMapsConfig {
+      static let apiKey = "#{escaped}"
+    }
+  SWIFT)
+end
+
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
+
+generate_google_maps_config!('VeloraDriver')
 
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -16,6 +47,9 @@ end
 
 target 'VeloraDriver' do
   config = use_native_modules!
+
+  rn_maps_path = '../node_modules/react-native-maps'
+  pod 'react-native-google-maps', :path => rn_maps_path
 
   use_react_native!(
     :path => config[:reactNativePath],

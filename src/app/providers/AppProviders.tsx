@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { store } from '@store';
 import { ThemeProvider } from './ThemeProvider';
 import { AuthProvider } from './AuthProvider';
+import { StripeProviderWrapper } from './StripeProviderWrapper';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +24,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <ThemeProvider>{children}</ThemeProvider>
+              <StripeProviderWrapper>
+                <ThemeProvider>{children}</ThemeProvider>
+              </StripeProviderWrapper>
             </AuthProvider>
           </QueryClientProvider>
         </SafeAreaProvider>

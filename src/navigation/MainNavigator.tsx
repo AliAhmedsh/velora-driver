@@ -5,6 +5,7 @@ import { VeloraText } from '@components/atoms/VeloraText';
 import { DashboardScreen } from '@features/dashboard/screens/DashboardScreen';
 import { TripsScreen } from '@features/trips/screens/TripsScreen';
 import { EarningsScreen } from '@features/earnings/screens/EarningsScreen';
+import { WalletScreen } from '@features/wallet/screens/WalletScreen';
 import { ProfileScreen } from '@features/profile/screens/ProfileScreen';
 import { useTheme } from '@hooks/useTheme';
 import { MainTabParamList } from './types';
@@ -18,6 +19,7 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
     Dashboard: '◉',
     Trips: '☰',
     Earnings: '◈',
+    Wallet: '◆',
     Profile: '○',
   };
 
@@ -58,6 +60,7 @@ export function MainNavigator() {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Trips" component={TripsScreen} />
       <Tab.Screen name="Earnings" component={EarningsScreen} />
+      <Tab.Screen name="Wallet" component={WalletScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

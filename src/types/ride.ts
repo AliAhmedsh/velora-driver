@@ -1,4 +1,7 @@
+import type { AcPreference, FuelOption, PaymentMethod, RentalDuration, ServiceType } from './booking';
+
 export type RideStatus =
+  | 'scheduled'
   | 'searching'
   | 'driver_assigned'
   | 'driver_arriving'
@@ -20,7 +23,23 @@ export type Ride = {
   pickup: RideLocation;
   dropoff: RideLocation;
   fare: number;
+  recommendedFare?: number;
+  customerOffer?: number;
   status: RideStatus;
+  serviceType: ServiceType;
+  scheduledAt?: string;
+  originCity?: string;
+  destinationCity?: string;
+  fuelOption?: FuelOption;
+  rentalDuration?: RentalDuration;
+  vehicleCount?: number;
+  distanceKm?: number;
+  durationMin?: number;
+  paymentMethod?: PaymentMethod;
+  driverId?: string;
+  womenOnly?: boolean;
+  acPreference?: AcPreference;
+  negotiationEnabled?: boolean;
   createdAt: string;
 };
 
