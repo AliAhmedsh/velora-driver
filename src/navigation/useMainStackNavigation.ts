@@ -1,5 +1,5 @@
-import { useNavigation } from '@react-navigation/native';
-import type { CompositeNavigationProp, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MainStackParamList, MainTabParamList } from './types';
@@ -9,29 +9,8 @@ export type MainTabNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<MainStackParamList>
 >;
 
-function navigateOnParentStack<RouteName extends keyof MainStackParamList>(
-  navigation: NavigationProp<ParamListBase>,
-  name: RouteName,
-  params?: MainStackParamList[RouteName],
-) {
-  let current: NavigationProp<ParamListBase> | undefined = navigation;
-
-  while (current) {
-    const routeNames = current.getState().routeNames;
-    if (routeNames.includes(name as string)) {
-      if (params !== undefined) {
-        current.navigate(name as string, params as object);
-      } else {
-        current.navigate(name as string);
-      }
-      return;
-    }
-    current = current.getParent() ?? undefined;
-  }
-}
-
-/** Navigate to screens on the main stack from nested tab screens. */
-export function useMainStackNavigation() {
+/** Navigate to stack screens from tab screens. */
+export function useMainStackNavigation(): MainTabNavigationProp {
   const navigation = useNavigation<MainTabNavigationProp>();
 
   return {
@@ -40,9 +19,14 @@ export function useMainStackNavigation() {
       name: RouteName,
       params?: MainStackParamList[RouteName],
     ) {
-      navigateOnParentStack(navigation, name, params);
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: name as string,
+          params: params as object | undefined,
+        }),
+      );
     },
-  };
+  } as MainTabNavigationProp;
 }
 
 export const IN_PROGRESS_RIDE_STATUSES = [

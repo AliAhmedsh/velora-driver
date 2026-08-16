@@ -8,7 +8,7 @@ import { RideMap } from '@components/organisms/RideMap';
 import { useTheme } from '@hooks/useTheme';
 import { useUserLocation } from '@hooks/useUserLocation';
 import { useAppDispatch, useAppSelector } from '@hooks/useAppDispatch';
-import { acceptRide, advanceRideStatusAction, declineRide } from '@store';
+import { acceptRide, advanceRideStatusAction, declineRide, syncRideState } from '@store';
 import { MainStackParamList } from '@navigation/types';
 import { spacing, radius, shadow } from '@theme/spacing';
 import { formatFare } from '@utils/locations';
@@ -58,12 +58,26 @@ export function DriverRideScreen({ navigation }: Props) {
   const actionLabel = ACTION_LABELS[ride.status];
 
   const handleAccept = async () => {
-    await dispatch(acceptRide());
+    try {
+      const result = await dispatch(acceptRide()).unwrap();
+      if (!result) {
+        Alert.alert('Ride unavailable', 'This request is no longer available.');
+        dispatch(syncRideState());
+        navigation.goBack();
+      }
+    } catch (error: any) {
+      Alert.alert('Could not accept ride', error?.message ?? 'Try again or wait for another request.');
+      dispatch(syncRideState());
+    }
   };
 
   const handleDecline = async () => {
-    const result = await dispatch(declineRide());
-    if (!result.payload) navigation.goBack();
+    try {
+      const result = await dispatch(declineRide()).unwrap();
+      if (!result) navigation.goBack();
+    } catch (error: any) {
+      Alert.alert('Could not decline', error?.message ?? 'Try again');
+    }
   };
 
   const handleSendOffer = async () => {
@@ -91,9 +105,13 @@ export function DriverRideScreen({ navigation }: Props) {
   };
 
   const handleAdvance = async () => {
-    const result = await dispatch(advanceRideStatusAction());
-    if (result.payload?.ride?.status === 'completed') {
-      navigation.goBack();
+    try {
+      const result = await dispatch(advanceRideStatusAction()).unwrap();
+      if (result?.ride?.status === 'completed') {
+        navigation.goBack();
+      }
+    } catch (error: any) {
+      Alert.alert('Could not update ride', error?.message ?? 'Try again');
     }
   };
 

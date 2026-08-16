@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View, Pressable, Switch, ActivityIndicator } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { GradientBackdrop } from '@components/atoms/GradientBackdrop';
 import { VeloraText } from '@components/atoms/VeloraText';
 import { useTheme } from '@hooks/useTheme';
 import { useAppDispatch, useAppSelector } from '@hooks/useAppDispatch';
@@ -76,13 +76,23 @@ export function DashboardScreen() {
 
   const handleOnlineToggle = async (value: boolean) => {
     dispatch(setOnline(value));
-    await updateDriverSettings({ is_online: value });
-    dispatch(syncRideState());
+    try {
+      await updateDriverSettings({ is_online: value });
+      dispatch(syncRideState());
+    } catch (error: any) {
+      dispatch(setOnline(!value));
+      Alert.alert('Could not go online', error?.message ?? 'Check your connection and try again.');
+    }
   };
 
   const handleAutoMatchToggle = async (value: boolean) => {
     setAutoMatch(value);
-    await updateDriverSettings({ auto_match: value });
+    try {
+      await updateDriverSettings({ auto_match: value });
+    } catch (error: any) {
+      setAutoMatch(!value);
+      Alert.alert('Could not save setting', error?.message ?? 'Try again');
+    }
   };
 
   if (loading) {
@@ -95,13 +105,16 @@ export function DashboardScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: theme.colors.background }]}>
-      <LinearGradient
-        colors={[theme.colors.gradientStart, theme.colors.background]}
-        style={[styles.header, { paddingTop: insets.top + spacing.lg }]}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: insets.top + spacing.lg, backgroundColor: theme.colors.primaryDark },
+        ]}>
+        <GradientBackdrop colors={[theme.colors.primaryDark, theme.colors.primary]} />
         <View style={styles.headerRow}>
           <View>
-            <VeloraText variant="caption" color="rgba(250,247,242,0.75)">Driver dashboard</VeloraText>
-            <VeloraText variant="h2" color={theme.colors.textOnPrimary}>Velora Driver</VeloraText>
+            <VeloraText variant="caption" color={theme.colors.brown200}>Driver dashboard</VeloraText>
+            <VeloraText variant="h2" color={theme.colors.white}>Velora Driver</VeloraText>
           </View>
         </View>
 
@@ -126,13 +139,15 @@ export function DashboardScreen() {
             />
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}>
         {(hasIncoming || hasActiveRide) && (
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.9}
+            delayPressIn={0}
             onPress={() => navigation.navigate('DriverRide')}
             style={[
               styles.requestBanner,
@@ -148,7 +163,7 @@ export function DashboardScreen() {
             <VeloraText variant="label" color={theme.colors.textOnPrimary} style={styles.tapHint}>
               Tap to open map →
             </VeloraText>
-          </Pressable>
+          </TouchableOpacity>
         )}
 
         <View style={styles.earningsRow}>
@@ -174,9 +189,9 @@ export function DashboardScreen() {
 
         <View style={styles.sectionHeader}>
           <VeloraText variant="h3">Destination queue</VeloraText>
-          <Pressable onPress={() => navigation.navigate('DestinationQueue')}>
+          <TouchableOpacity activeOpacity={0.85} delayPressIn={0} onPress={() => navigation.navigate('DestinationQueue')}>
             <VeloraText variant="label" color={theme.colors.primary}>Edit</VeloraText>
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         <View
@@ -217,14 +232,13 @@ export function DashboardScreen() {
         </View>
 
         {topPlan && (
-          <LinearGradient
-            colors={[theme.colors.gradientStart, theme.colors.gradientEnd]}
-            style={[styles.cta, shadow.md]}>
-            <VeloraText variant="h3" color={theme.colors.textOnPrimary}>{topPlan.name}</VeloraText>
+          <View style={[styles.cta, shadow.md, styles.ctaWrap]}>
+            <GradientBackdrop colors={[theme.colors.gradientStart, theme.colors.gradientEnd]} />
+            <VeloraText variant="h3" color={theme.colors.white}>{topPlan.name}</VeloraText>
             <VeloraText variant="caption" color={theme.colors.brown200} style={styles.ctaSub}>
               PKR {topPlan.price_pkr} · {topPlan.description ?? 'Intercity driver benefits'}
             </VeloraText>
-          </LinearGradient>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -239,12 +253,14 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     borderBottomLeftRadius: radius.xxl,
     borderBottomRightRadius: radius.xxl,
+    overflow: 'hidden',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.lg,
+    zIndex: 1,
   },
   onlineCard: { padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1 },
   onlineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -280,5 +296,6 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.06)',
   },
   cta: { padding: spacing.xl, borderRadius: radius.xl },
-  ctaSub: { marginTop: spacing.xs },
+  ctaWrap: { overflow: 'hidden' },
+  ctaSub: { marginTop: spacing.xs, zIndex: 1 },
 });

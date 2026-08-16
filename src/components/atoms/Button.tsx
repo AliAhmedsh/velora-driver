@@ -1,19 +1,18 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Pressable,
-  PressableProps,
   StyleSheet,
+  TouchableOpacity,
+  TouchableOpacityProps,
   ViewStyle,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import { VeloraText } from './VeloraText';
 import { useTheme } from '@hooks/useTheme';
 import { radius, spacing } from '@theme/spacing';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
 
-type ButtonProps = PressableProps & {
+type ButtonProps = TouchableOpacityProps & {
   label: string;
   variant?: ButtonVariant;
   loading?: boolean;
@@ -32,81 +31,63 @@ export function Button({
   const { theme } = useTheme();
   const isDisabled = disabled || loading;
 
-  if (variant === 'primary') {
-    return (
-      <Pressable
-        disabled={isDisabled}
-        style={({ pressed }) => [
-          fullWidth && styles.fullWidth,
-          pressed && !isDisabled && styles.pressed,
-          style as ViewStyle,
-        ]}
-        {...rest}>
-        <LinearGradient
-          colors={[theme.colors.gradientStart, theme.colors.gradientEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[
-            styles.base,
-            isDisabled && styles.disabled,
-            fullWidth && styles.fullWidth,
-          ]}>
-          {loading ? (
-            <ActivityIndicator color={theme.colors.textOnPrimary} />
-          ) : (
-            <VeloraText
-              variant="button"
-              color={theme.colors.textOnPrimary}
-              align="center">
-              {label}
-            </VeloraText>
-          )}
-        </LinearGradient>
-      </Pressable>
-    );
-  }
-
   const variantStyles: Record<ButtonVariant, ViewStyle> = {
-    secondary: {
-      backgroundColor: theme.colors.surfaceElevated,
+    primary: {
+      backgroundColor: theme.colors.primary,
       borderWidth: 0,
     },
-    ghost: { backgroundColor: 'transparent' },
-    outline: {
+    secondary: {
+      backgroundColor: theme.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    ghost: {
       backgroundColor: 'transparent',
+      borderWidth: 0,
+    },
+    outline: {
+      backgroundColor: theme.colors.surface,
       borderWidth: 1.5,
       borderColor: theme.colors.primary,
     },
-    primary: {},
   };
 
   const textColors: Record<ButtonVariant, string> = {
-    primary: theme.colors.textOnPrimary,
+    primary: theme.colors.white,
     secondary: theme.colors.text,
     ghost: theme.colors.primary,
     outline: theme.colors.primary,
   };
 
+  const spinnerColors: Record<ButtonVariant, string> = {
+    primary: theme.colors.white,
+    secondary: theme.colors.primary,
+    ghost: theme.colors.primary,
+    outline: theme.colors.primary,
+  };
+
   return (
-    <Pressable
+    <TouchableOpacity
+      activeOpacity={0.85}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      accessibilityRole="button"
+      delayPressIn={0}
+      style={[
         styles.base,
         variantStyles[variant],
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
-        pressed && !isDisabled && styles.pressed,
         style as ViewStyle,
       ]}
       {...rest}>
       {loading ? (
-        <ActivityIndicator color={theme.colors.primary} />
+        <ActivityIndicator color={spinnerColors[variant]} />
       ) : (
         <VeloraText variant="button" color={textColors[variant]} align="center">
           {label}
         </VeloraText>
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
@@ -120,6 +101,5 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   fullWidth: { width: '100%' },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.5 },
 });
